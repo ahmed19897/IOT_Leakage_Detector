@@ -17,6 +17,7 @@ void Danger_Response(int channel);
 void Sensor_Check(void);//checks the sensor reading if within range green light on , if not within range red light on and buzzer on
 void turn_on_off_sensor(void);
 void Analogee_Value(void);
+void Get_User_Setpoint(u8 * ptr);
 
 char *LCDptr[3]={0};
 char y[3]={0};
@@ -71,6 +72,21 @@ ISR (USART_RXC_vect)
 ISR(ADC_vect)
 {
 	 ADCSRA |=(1<<ADSC);//begin the next ADC conversion
+	 
+	 switch (ADMUX)
+	{
+		case 0x41:
+		ADMUX = 0x42;
+		break;
+		
+		case 0x42:
+		ADMUX = 0x41;
+		break;
+		
+		default:
+		//Default code
+		break;
+	}
 
 }
 /////////////////////////////////////////////////////////////////////////////////////
@@ -256,11 +272,13 @@ void Get_Char(void)
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void Sensor_Check(void)
 {
+	u8 User_Setpoint;
+	Get_User_Setpoint(&User_Setpoint);
 
 	ADCLptr=&ADCL;//assign the adress of the ADCL(which stores the ADC value after conversion) to the ADCLPTR pointeer
 	ADCHptr=&ADCH;
 
-	if(* ADCLptr>260 & time>5750)
+	if(* ADCLptr>User_Setpoint & time>5750)
 	 {
 		counterADC++;//to make sure that the high reading is not momentarely
 
@@ -306,4 +324,18 @@ void Analogee_Value(void)
 	Usart_Send(&Esp_Communicate[8][0],2);
 }
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void Get_User_Setpoint(u8 * ptr)
+{
+	if(ADMUX==0x42)
+	{
+		u16 * ADCLptrUserSetpoint=0;
+		u16 * ADCHptrUserSetpoint=0;
+		u8 UserSetpoint=0;
 
+		ADCLptrUserSetpoint=&ADCL;//assign the adress of the ADCL(which stores the ADC value after conversion) to the ADCLPTR pointeer
+		ADCHptrUserSetpoint=&ADCH;
+			
+		*ptr=*ADCLptrUserSetpoint;	
+	}
+	
+}
